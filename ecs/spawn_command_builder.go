@@ -1,32 +1,29 @@
-package esc_core
+package ecs
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
-type AddCommandBuilder struct {
+type SpawnCommandBuilder struct {
 	buffer     *CommandBuffer
-	entity     Entity
 	components []any
 	seen       map[reflect.Type]struct{}
 	err        error
 	commited   bool
 }
 
-type addCommand struct {
-	entity     Entity
+type spawnCommand struct {
 	components []any
 }
 
-func (b *AddCommandBuilder) With(component any) *AddCommandBuilder {
+func (b *SpawnCommandBuilder) With(component any) *SpawnCommandBuilder {
 	if b.err != nil {
 		return b
 	}
 
 	if b.commited {
-		b.err = errors.New("add command already committed")
+		b.err = errors.New("spawn command already committed")
 		return b
 	}
 
@@ -38,7 +35,7 @@ func (b *AddCommandBuilder) With(component any) *AddCommandBuilder {
 	}
 
 	if _, exists := b.seen[typeComponent]; exists {
-		b.err = fmt.Errorf("%w: %s", ErrDuplicateComponent, typeComponent.Name())
+		b.err = errors.New("spawn command already committed")
 		return b
 	}
 
@@ -48,13 +45,8 @@ func (b *AddCommandBuilder) With(component any) *AddCommandBuilder {
 	return b
 }
 
-func (b *AddCommandBuilder) Bundle(bundle Bundle) *AddCommandBuilder {
+func (b *SpawnCommandBuilder) Bundle(bundle Bundle) *SpawnCommandBuilder {
 	if b.err != nil {
-		return b
-	}
-
-	if b.commited {
-		b.err = errors.New("add command already committed")
 		return b
 	}
 
@@ -79,29 +71,27 @@ func (b *AddCommandBuilder) Bundle(bundle Bundle) *AddCommandBuilder {
 	return b
 }
 
-func (b *AddCommandBuilder) Commit() error {
+func (b *SpawnCommandBuilder) Commit() error {
 	if b.err != nil {
 		return b.err
 	}
 
 	if b.commited {
-		return errors.New("add command already committed")
+		return errors.New("spawn command already committed")
 	}
 
 	if len(b.components) == 0 {
-		return errors.New("add command requires at least one component")
+		return errors.New("spawn command requires at least one component")
 	}
 
 	b.commited = true
-
-	b.buffer.add(addCommand{
-		entity:     b.entity,
-		components: append([]any(nil), b.components...),
-	})
+	var components = append([]any(nil), b.components...)
+	b.buffer.add(spawnCommand{components})
 
 	return nil
 }
 
-func (c addCommand) apply(world *World) error {
-	return Add(world, c.entity, c.components...)
+func (c spawnCommand) apply(world *World) error {
+	_, err := Spawn(world, c.components...)
+	return err
 }

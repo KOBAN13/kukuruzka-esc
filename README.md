@@ -2,7 +2,7 @@
 
 `Kukuruzka-ESC` - экспериментальное ECS-ядро на Go.
 
-Проект реализует базовые сущности Entity Component System: мир, сущности, компоненты, архетипы, запросы, системы, буфер команд и ресурсы. Основной код библиотеки находится в пакете [`esc_core`](./esc_core).
+Проект реализует базовые сущности Entity Component System: мир, сущности, компоненты, архетипы, запросы, системы, буфер команд и ресурсы. Основной код библиотеки находится в пакете [`ecs`](./ecs).
 
 > Статус: проект находится в активной разработке. Публичный API уже намечен, но тестовое покрытие и демонстрационный пример пока не оформлены. Примеры ниже показывают предполагаемый стиль использования текущих типов.
 
@@ -23,18 +23,38 @@
 
 - Go `1.26` или новее, согласно [`go.mod`](./go.mod).
 
+## Installation
+
+Добавьте пакет в другой Go-проект:
+
+```bash
+go get github.com/KOBAN13/Kukuruzka-ESC/ecs
+```
+
+Импортируйте пакет в коде:
+
+```go
+import ecs "github.com/KOBAN13/Kukuruzka-ESC/ecs"
+```
+
+Для фиксированной версии используйте тег:
+
+```bash
+go get github.com/KOBAN13/Kukuruzka-ESC/ecs@v0.1.0
+```
+
 ## Структура проекта
 
 ```text
 .
-├── esc_core/          # ECS-ядро
+├── ecs/               # ECS-ядро
 ├── main.go            # текущая стартовая заглушка
 ├── go.mod             # Go-модуль
 ├── LICENSE            # MIT License
 └── README.md
 ```
 
-Ключевые файлы пакета `esc_core`:
+Ключевые файлы пакета `ecs`:
 
 - `world.go` - создание мира и операции над сущностями;
 - `component.go` - компоненты, registry и ошибки;
@@ -68,7 +88,7 @@ package main
 import (
 	"fmt"
 
-	ecs "github.com/KOBAN13/Kukuruzka-ESC/esc_core"
+	ecs "github.com/KOBAN13/Kukuruzka-ESC/ecs"
 )
 
 type Position struct {
@@ -106,8 +126,8 @@ func main() {
 Создание мира:
 
 ```go
-world := esc_core.NewWorld()
-worldWithCapacity := esc_core.NewWorld(esc_core.WithEntityCapacity(1024))
+world := ecs.NewWorld()
+worldWithCapacity := ecs.NewWorld(ecs.WithEntityCapacity(1024))
 ```
 
 ### Components
@@ -125,7 +145,7 @@ type Health struct {
 Токен компонента:
 
 ```go
-token := esc_core.Component[Health]()
+token := ecs.Component[Health]()
 ```
 
 ### Entity Operations
@@ -157,7 +177,7 @@ token := esc_core.Component[Health]()
 `CommandBuffer` нужен для отложенных изменений мира, например во время работы систем.
 
 ```go
-commands := &esc_core.CommandBuffer{}
+commands := &ecs.CommandBuffer{}
 
 err := commands.Spawn().
 	With(Position{}).
@@ -188,15 +208,15 @@ type System interface {
 `Runner` выполняет системы по стадиям и применяет накопленные команды после каждой стадии:
 
 ```go
-const UpdateStage esc_core.StageID = 1
+const UpdateStage ecs.StageID = 1
 
-runner := esc_core.NewRunner([]esc_core.StageID{UpdateStage})
+runner := ecs.NewRunner([]ecs.StageID{UpdateStage})
 runner.Add(mySystem)
 
-ctx := &esc_core.Context{
+ctx := &ecs.Context{
 	World:     world,
-	Commands: &esc_core.CommandBuffer{},
-	Resources: esc_core.NewResources(),
+	Commands: &ecs.CommandBuffer{},
+	Resources: ecs.NewResources(),
 }
 
 err := runner.ValidateAccess()

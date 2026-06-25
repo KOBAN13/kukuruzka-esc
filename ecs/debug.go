@@ -1,4 +1,4 @@
-package esc_core
+package ecs
 
 type ArchetypeReport struct {
 	Archetypes []ArchetypeInfo
