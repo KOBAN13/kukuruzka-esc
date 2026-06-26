@@ -26,11 +26,11 @@ func (b *RemoveCommandBuilder) Component(component ComponentToken) *RemoveComman
 	}
 
 	if b.commited {
-		b.err = errors.New("add command already committed")
+		b.err = errors.New("remove command already committed")
 		return b
 	}
 
-	var typeComponent = reflect.TypeOf(component)
+	var typeComponent = component.Type
 
 	if err := validateComponentType(typeComponent); err != nil {
 		b.err = err
@@ -54,11 +54,11 @@ func (b *RemoveCommandBuilder) Commit() error {
 	}
 
 	if b.commited {
-		return errors.New("add command already committed")
+		return errors.New("remove command already committed")
 	}
 
 	if len(b.componentsTokens) == 0 {
-		return errors.New("add command requires at least one component")
+		return errors.New("remove command requires at least one component")
 	}
 
 	b.commited = true

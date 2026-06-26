@@ -27,7 +27,7 @@ func (a AccessSet) Merge(other AccessSet) bool {
 	var conflict = false
 
 	for id := range other.Writes {
-		if containsComponentSet(id, a.Writes) || containsComponentSet(id, other.Reads) {
+		if containsComponentSet(id, a.Writes) || containsComponentSet(id, a.Reads) {
 			conflict = true
 		}
 
@@ -50,13 +50,13 @@ func (a AccessSet) ConflictsWith(other AccessSet) []ComponentID {
 	var conflict []ComponentID
 
 	for id := range a.Writes {
-		if containsComponentSet(id, other.Writes) || containsComponentSet(id, a.Reads) {
+		if containsComponentSet(id, other.Writes) || containsComponentSet(id, other.Reads) {
 			conflict = append(conflict, id)
 		}
 	}
 
-	for id := range other.Reads {
-		if containsComponentSet(id, a.Writes) {
+	for id := range a.Reads {
+		if containsComponentSet(id, other.Writes) {
 			conflict = append(conflict, id)
 		}
 	}
@@ -67,10 +67,14 @@ func (a AccessSet) ConflictsWith(other AccessSet) []ComponentID {
 func (c AccessConflict) Error() string {
 	return fmt.Sprintf(
 		"%v: stage %d component %d: %s conflicts with %s",
-		ErrAccessConflict,
+		c.Unwrap(),
 		c.Stage,
 		c.Component,
 		c.First,
 		c.Second,
 	)
+}
+
+func (c AccessConflict) Unwrap() error {
+	return ErrAccessConflict
 }

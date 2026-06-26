@@ -98,14 +98,18 @@ func Read[T any](it *Iterator) (T, error) {
 		return zeroValue, err
 	}
 
-	if !containsComponent(componentInfo.Id, it.query.descriptor.Reads) {
-		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.Id)
+	if it.current == nil {
+		return zeroValue, fmt.Errorf("no current archetype found")
 	}
 
-	var col, ok = it.current.column(componentInfo.Id)
+	if !containsComponent(componentInfo.ID, it.query.descriptor.Reads) {
+		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.ID)
+	}
+
+	var col, ok = it.current.column(componentInfo.ID)
 
 	if !ok {
-		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.Id)
+		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.ID)
 	}
 
 	return col.ValueAny(it.row).(T), nil
@@ -119,14 +123,18 @@ func Write[T any](it *Iterator) (*T, error) {
 		return zeroValue, err
 	}
 
-	if !containsComponent(componentInfo.Id, it.query.descriptor.Writes) {
-		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.Id)
+	if it.current == nil {
+		return zeroValue, fmt.Errorf("no current archetype found")
 	}
 
-	var col, ok = it.current.column(componentInfo.Id)
+	if !containsComponent(componentInfo.ID, it.query.descriptor.Writes) {
+		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.ID)
+	}
+
+	var col, ok = it.current.column(componentInfo.ID)
 
 	if !ok {
-		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.Id)
+		return zeroValue, fmt.Errorf("read: component %v does not contain read", componentInfo.ID)
 	}
 
 	return col.PtrAny(it.currentRow).(*T), nil

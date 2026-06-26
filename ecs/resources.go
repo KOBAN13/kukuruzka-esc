@@ -14,17 +14,23 @@ func NewResources() *Resources {
 	}
 }
 
-func PutResources[T any](resources *Resources, value T) {
+func PutResource[T any](resources *Resources, value T) error {
 	var key = reflect.TypeOf((*T)(nil)).Elem()
 
-	resources.values[key] = value
+	if _, ok := resources.values[key]; !ok {
+		return ErrResourcesDuplicate
+	}
+
+	resources.values[key] = &value
+
+	return nil
 }
 
 func GetResources[T any](resources *Resources) (*T, bool, error) {
 	var key = reflect.TypeOf((*T)(nil)).Elem()
 
 	if _, ok := resources.values[key]; !ok {
-		return nil, false, ErrComponentNotFound
+		return nil, false, ErrResourcesNotFound
 	}
 
 	var value, _ = resources.values[key].(*T)
@@ -35,7 +41,7 @@ func GetResources[T any](resources *Resources) (*T, bool, error) {
 func RemoveResources[T any](resources *Resources) error {
 	var key = reflect.TypeOf((*T)(nil)).Elem()
 	if _, ok := resources.values[key]; !ok {
-		return ErrComponentNotFound
+		return ErrResourcesNotFound
 	}
 
 	delete(resources.values, key)

@@ -7,8 +7,7 @@ import (
 
 type BundleBuilder struct {
 	components []any
-	seen       map[ComponentID]struct{}
-	registry   *ComponentRegistry
+	seen       map[reflect.Type]struct{}
 	err        error
 }
 
@@ -21,7 +20,7 @@ type BundleFunc func(*BundleBuilder) error
 func NewBundleBuilder() *BundleBuilder {
 	return &BundleBuilder{
 		components: make([]any, 0),
-		seen:       make(map[ComponentID]struct{}),
+		seen:       make(map[reflect.Type]struct{}),
 	}
 }
 
@@ -30,28 +29,19 @@ func (f BundleFunc) Apply(builder *BundleBuilder) error {
 }
 
 func (b *BundleBuilder) With(component any) error {
-	if err := containsComponentAny(component, b.components); err != nil {
-		return err
-	}
+	var componentType = reflect.TypeOf(component)
 
-	var token = ComponentToken{
-		Type: reflect.TypeOf(component),
-		Name: reflect.TypeOf(component).Name(),
-	}
-
-	var info, err = b.registry.Info(token)
-
-	if err != nil {
+	if err := validateComponentType(componentType); err != nil {
 		b.err = err
 		return err
 	}
 
-	if _, exists := b.seen[info.Id]; exists {
-		b.err = fmt.Errorf("%w: %s", ErrDuplicateComponent, info.Name)
+	if _, exists := b.seen[componentType]; exists {
+		b.err = fmt.Errorf("%w: %s", ErrDuplicateComponent, componentType.Name())
 		return b.err
 	}
 
-	b.seen[info.Id] = struct{}{}
+	b.seen[componentType] = struct{}{}
 	b.components = append(b.components, component)
 
 	return nil
@@ -66,11 +56,7 @@ func SpawnBundle(world *World, bundle Bundle) (Entity, error) {
 		return Entity{}, ErrInvalidComponentType
 	}
 
-	var builder = &BundleBuilder{
-		components: make([]any, 0),
-		seen:       make(map[ComponentID]struct{}),
-		registry:   world.registry,
-	}
+	var builder = NewBundleBuilder()
 
 	if err := bundle.Apply(builder); err != nil {
 		return Entity{}, err

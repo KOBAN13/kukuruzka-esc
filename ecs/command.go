@@ -14,6 +14,13 @@ type Command interface {
 	apply(world *World) error
 }
 
+func NewCommandBuffer() *CommandBuffer {
+	return &CommandBuffer{
+		commands: make([]Command, 0),
+		errors:   make([]error, 0),
+	}
+}
+
 func (c *CommandBuffer) Spawn() *SpawnCommandBuilder {
 	return &SpawnCommandBuilder{
 		buffer:     c,

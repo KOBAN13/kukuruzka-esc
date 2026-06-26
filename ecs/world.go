@@ -114,7 +114,7 @@ func Add(world *World, entity Entity, components ...any) error {
 
 	for _, id := range signature.ids {
 		if source.signature.containsComponent(id) {
-			var info, _ = world.registry.InfoById(id)
+			var info, _ = world.registry.InfoByID(id)
 			return fmt.Errorf("%w: %s", ErrDuplicateComponent, info.Name)
 		}
 	}
@@ -166,13 +166,13 @@ func Remove(world *World, entity Entity, componentTokens ...ComponentToken) erro
 			return err
 		}
 
-		seen[info.Id] = struct{}{}
+		seen[info.ID] = struct{}{}
 
-		if !source.signature.containsComponent(info.Id) {
+		if !source.signature.containsComponent(info.ID) {
 			return fmt.Errorf("%w: %s", ErrComponentNotFound, info.Name)
 		}
 
-		removeIds = append(removeIds, info.Id)
+		removeIds = append(removeIds, info.ID)
 	}
 
 	var resultIds = make([]ComponentID, 0, len(source.signature.ids)-len(removeIds))
@@ -216,7 +216,7 @@ func Has[T any](world *World, entity Entity) (bool, error) {
 		return false, err
 	}
 
-	return source.signature.containsComponent(info.Id), nil
+	return source.signature.containsComponent(info.ID), nil
 }
 
 func Get[T any](world *World, entity Entity) (T, bool, error) {
@@ -244,7 +244,7 @@ func Get[T any](world *World, entity Entity) (T, bool, error) {
 		return zeroValue, false, err
 	}
 
-	col, ok := source.column(info.Id)
+	col, ok := source.column(info.ID)
 
 	if !ok {
 		return zeroValue, false, nil
@@ -288,12 +288,12 @@ func GetWrite[T any](world *World, entity Entity) (*T, bool, error) {
 		return zeroValue, false, err
 	}
 
-	col, ok := source.column(info.Id)
+	col, ok := source.column(info.ID)
 	if !ok {
 		return zeroValue, false, nil
 	}
 
-	value, ok := col.PtrAny(slot.location.row).(T)
+	value, ok := col.PtrAny(slot.location.row).(*T)
 
 	if !ok {
 		return zeroValue, false, fmt.Errorf(
@@ -304,7 +304,7 @@ func GetWrite[T any](world *World, entity Entity) (*T, bool, error) {
 		)
 	}
 
-	return &value, true, nil
+	return value, true, nil
 }
 
 func Set[T any](world *World, entity Entity, value T) error {
@@ -330,7 +330,7 @@ func Set[T any](world *World, entity Entity, value T) error {
 		return err
 	}
 
-	col, ok := source.column(info.Id)
+	col, ok := source.column(info.ID)
 	if !ok {
 		return ErrInvalidComponentType
 	}
@@ -364,12 +364,12 @@ func (world *World) InspectArchetypes() ArchetypeReport {
 	for _, archetype := range world.archetypes {
 		var archetypeInfo = ArchetypeInfo{
 			ID:         uint32(archetype.id),
-			Components: make([]string, len(archetype.entities)),
+			Components: make([]string, len(archetype.signature.ids)),
 			Entities:   archetype.Len(),
 		}
 
 		for _, componentId := range archetype.signature.ids {
-			var info, ok = world.registry.InfoById(componentId)
+			var info, ok = world.registry.InfoByID(componentId)
 
 			if !ok {
 				archetypeInfo.Components = append(
@@ -381,6 +381,8 @@ func (world *World) InspectArchetypes() ArchetypeReport {
 
 			archetypeInfo.Components = append(archetypeInfo.Components, info.Name)
 		}
+
+		result.Archetypes = append(result.Archetypes, archetypeInfo)
 	}
 
 	return result
@@ -417,8 +419,8 @@ func (world *World) allocateEntity() Entity {
 	}
 
 	var index = uint32(len(world.slots))
-	world.slots = append(world.slots, entitySlot{alive: true})
-	return Entity{index: index}
+	world.slots = append(world.slots, entitySlot{generation: 1, alive: true})
+	return Entity{index: index, generation: 1}
 }
 
 func (world *World) releaseEntity(entity Entity) {
@@ -463,12 +465,12 @@ func (world *World) collectComponentValues(components []any) (map[ComponentID]an
 			return nil, componentSignature{}, err
 		}
 
-		if _, exists := values[info.Id]; exists {
+		if _, exists := values[info.ID]; exists {
 			return nil, componentSignature{}, fmt.Errorf("%w: %s", ErrDuplicateComponent, info.Name)
 		}
 
-		values[info.Id] = component
-		ids = append(ids, info.Id)
+		values[info.ID] = component
+		ids = append(ids, info.ID)
 	}
 
 	var signature = newComponentSignature(ids)
@@ -484,7 +486,7 @@ func (world *World) archetypeFor(signature componentSignature) (*archetype, erro
 	var columns = make(map[ComponentID]column, len(signature.ids))
 
 	for _, id := range signature.ids {
-		var info, ok = world.registry.InfoById(id)
+		var info, ok = world.registry.InfoByID(id)
 
 		if !ok {
 			return nil, fmt.Errorf("%w: component id %d", ErrComponentNotFound, id)

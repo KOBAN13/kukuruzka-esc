@@ -83,6 +83,7 @@ func (r *Runner) Update(ctx *Context) error {
 			var err = system.Update(ctx)
 
 			if err != nil {
+				ctx.World.mutationPhase = MutationIdle
 				return err
 			}
 		}
@@ -92,6 +93,7 @@ func (r *Runner) Update(ctx *Context) error {
 		var err = ctx.Commands.Apply(ctx.World)
 
 		if err != nil {
+			ctx.World.mutationPhase = MutationIdle
 			return err
 		}
 

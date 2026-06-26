@@ -8,6 +8,7 @@ import (
 
 var (
 	ErrResourcesNotFound    = errors.New("resources not found")
+	ErrResourcesDuplicate   = errors.New("resources duplicate")
 	ErrInvalidEntity        = errors.New("invalid entity")
 	ErrComponentNotFound    = errors.New("component not found")
 	ErrDuplicateComponent   = errors.New("duplicate component")
@@ -21,7 +22,7 @@ var (
 type ComponentID uint32
 
 type ComponentInfo struct {
-	Id    ComponentID
+	ID    ComponentID
 	Name  string
 	Type  reflect.Type
 	Size  uintptr
@@ -62,7 +63,7 @@ func (cr *ComponentRegistry) ID(token ComponentToken) (ComponentID, error) {
 		return 0, err
 	}
 
-	return info.Id, nil
+	return info.ID, nil
 }
 
 func (cr *ComponentRegistry) Info(token ComponentToken) (ComponentInfo, error) {
@@ -78,7 +79,7 @@ func (cr *ComponentRegistry) Info(token ComponentToken) (ComponentInfo, error) {
 	cr.next++
 
 	var info = ComponentInfo{
-		Id:    id,
+		ID:    id,
 		Name:  token.Name,
 		Type:  token.Type,
 		Size:  token.Type.Size(),
@@ -90,7 +91,7 @@ func (cr *ComponentRegistry) Info(token ComponentToken) (ComponentInfo, error) {
 	return info, nil
 }
 
-func (cr *ComponentRegistry) InfoById(id ComponentID) (ComponentInfo, bool) {
+func (cr *ComponentRegistry) InfoByID(id ComponentID) (ComponentInfo, bool) {
 	var info, ok = cr.byId[id]
 
 	return info, ok

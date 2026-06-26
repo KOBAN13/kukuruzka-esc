@@ -2,7 +2,6 @@ package ecs
 
 import (
 	"fmt"
-	"slices"
 )
 
 type QueryDescriptor struct {
@@ -116,11 +115,11 @@ func (builder *QueryBuilder) Read(component ComponentToken) *QueryBuilder {
 		return builder
 	}
 
-	if containsComponent(componentId, builder.with) {
+	if !containsComponent(componentId, builder.with) {
 		builder.with = append(builder.with, componentId)
 	}
 
-	if containsComponent(componentId, builder.reads) {
+	if !containsComponent(componentId, builder.reads) {
 		builder.reads = append(builder.reads, componentId)
 	}
 
@@ -149,19 +148,29 @@ func (builder *QueryBuilder) Write(component ComponentToken) *QueryBuilder {
 		return builder
 	}
 
-	if containsComponent(componentId, builder.with) {
+	if !containsComponent(componentId, builder.with) {
 		builder.with = append(builder.with, componentId)
 	}
 
-	if containsComponent(componentId, builder.writes) {
-		builder.reads = append(builder.reads, componentId)
+	if !containsComponent(componentId, builder.writes) {
+		builder.writes = append(builder.writes, componentId)
 	}
+
 	return builder
 }
 
 func (builder *QueryBuilder) Build() (*Query, error) {
 	if builder.buildError != nil {
 		return nil, builder.buildError
+	}
+
+	var access = NewAccessSet()
+	for _, id := range builder.reads {
+		access.Reads[id] = struct{}{}
+	}
+
+	for _, id := range builder.writes {
+		access.Writes[id] = struct{}{}
 	}
 
 	return &Query{
@@ -174,13 +183,32 @@ func (builder *QueryBuilder) Build() (*Query, error) {
 			Reads:   append([]ComponentID{}, builder.reads...),
 			Writes:  append([]ComponentID{}, builder.writes...),
 		},
-		access: NewAccessSet(),
+		access: access,
 	}, nil
 }
 
+func (q *Query) Access() AccessSet {
+	var access = NewAccessSet()
+
+	for id := range q.access.Reads {
+		access.Reads[id] = struct{}{}
+	}
+
+	for id := range q.access.Writes {
+		access.Writes[id] = struct{}{}
+	}
+
+	return access
+}
+
 func containsComponent(id ComponentID, ids []ComponentID) bool {
-	_, ok := slices.BinarySearch(ids, id)
-	return ok
+	for _, item := range ids {
+		if item == id {
+			return true
+		}
+	}
+
+	return false
 }
 
 func containsComponentAny(id any, ids []any) error {

@@ -35,7 +35,7 @@ func (b *SpawnCommandBuilder) With(component any) *SpawnCommandBuilder {
 	}
 
 	if _, exists := b.seen[typeComponent]; exists {
-		b.err = errors.New("spawn command already committed")
+		b.err = ErrDuplicateComponent
 		return b
 	}
 
