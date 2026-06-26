@@ -31,17 +31,33 @@
 
 ## Установка
 
-Пакет можно подключить из Go-проекта:
+Сейчас пакет не стоит подключать через прямой `go get`: путь модуля в
+[`go.mod`](./go.mod) и URL текущего репозитория ещё не синхронизированы.
+
+Надёжный вариант для локальной разработки - клонировать репозиторий и
+подключить его через `replace` в проекте-потребителе:
 
 ```bash
-go get github.com/KOBAN13/Kukuruzka-ECS
+git clone https://github.com/KOBAN13/kukuruzka-esc.git
 ```
 
-Импорт пакета:
+В `go.mod` проекта-потребителя:
+
+```go
+require github.com/KOBAN13/Kukuruzka-ECS v0.0.0
+
+replace github.com/KOBAN13/Kukuruzka-ECS => ../kukuruzka-esc
+```
+
+Импорт пакета остаётся таким же, как путь модуля:
 
 ```go
 import ecs "github.com/KOBAN13/Kukuruzka-ECS/ecs"
 ```
+
+После публикации репозитория по тому же пути, который указан в `go.mod`,
+локальный `replace` можно будет убрать и заменить подключение на обычный
+`go get`.
 
 ## Структура
 
