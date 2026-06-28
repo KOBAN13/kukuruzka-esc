@@ -201,6 +201,32 @@ func (q *Query) Access() AccessSet {
 	return access
 }
 
+func (q *Query) DebugInfo() QueryDebugInfo {
+	return QueryDebugInfo{
+		Query:   q.name,
+		With:    q.componentNames(q.descriptor.With),
+		Reads:   q.componentNames(q.descriptor.Reads),
+		Writes:  q.componentNames(q.descriptor.Writes),
+		Without: q.componentNames(q.descriptor.Without),
+	}
+}
+
+func (q *Query) componentNames(ids []ComponentID) []string {
+	var names = make([]string, len(ids))
+	
+	for i, id := range ids {
+		var componentInfo, ok = q.world.registry.InfoByID(id)
+
+		if !ok {
+			continue
+		}
+
+		names[i] = componentInfo.Name
+	}
+
+	return names
+}
+
 func containsComponent(id ComponentID, ids []ComponentID) bool {
 	for _, item := range ids {
 		if item == id {
