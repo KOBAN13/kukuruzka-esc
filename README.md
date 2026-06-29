@@ -167,6 +167,41 @@ if err != nil {
 }
 ```
 
+### Bundles
+
+`Bundle` описывает набор компонентов, который можно использовать для
+`SpawnBundle` или команд `Spawn().Bundle(...)` / `Add(...).Bundle(...)`.
+
+Для простых bundle удобно использовать `BundleFunc` и chain-style
+`BundleBuilder.With`. `With` накапливает первую ошибку внутри builder, а
+`Err()` возвращает итог:
+
+```go
+type PlayerConfig struct {
+	HP    int
+	Alive bool
+}
+
+type Active struct {
+	Value bool
+}
+
+func NewPlayerBundle(position Position, cfg PlayerConfig) ecs.Bundle {
+	return ecs.BundleFunc(func(b *ecs.BundleBuilder) error {
+		return b.With(Player{}).
+			With(position).
+			With(Health{Value: cfg.HP}).
+			With(Active{Value: cfg.Alive}).
+			Err()
+	})
+}
+
+cfg := PlayerConfig{HP: 100, Alive: true}
+entity, err := ecs.SpawnBundle(world, NewPlayerBundle(Position{X: 10}, cfg))
+```
+
+`BundleBuilder` отклоняет не-struct компоненты и дубликаты одного типа.
+
 ### CommandBuffer
 
 `CommandBuffer` накапливает изменения и применяет их позже. Это нужно для
@@ -174,7 +209,7 @@ if err != nil {
 отклоняются.
 
 ```go
-commands := &ecs.CommandBuffer{}
+commands := ecs.NewCommandBuffer()
 
 err := commands.Spawn().
 	With(Position{}).
@@ -208,6 +243,11 @@ commands.Clear()
 - `Read(componentToken)` - компонент читается системой;
 - `Write(componentToken)` - компонент изменяется системой;
 - `Build()` - собрать `Query`.
+
+Собранный `Query` также предоставляет:
+
+- `Access()` - копию `AccessSet` для валидации доступа систем;
+- `DebugInfo()` - описание query для `DebugQueries`.
 
 Итератор запроса предоставляет `Next()` и `Entity()`, а доступ к компонентам
 предполагается через `Read[T](it)` и `Write[T](it)`.
@@ -253,8 +293,43 @@ type System interface {
 	Name() string
 	Stage() StageID
 	Update(ctx *Context) error
+}
+
+type AccessProvider interface {
 	Access() AccessSet
+}
+
+type DebugProvider interface {
 	DebugQueries() []QueryDebugInfo
+}
+```
+
+`AccessProvider` и `DebugProvider` опциональны: `Runner` проверяет, реализует
+ли система эти интерфейсы. Если `Access()` нет, система считается не
+объявляющей доступ к компонентам.
+
+Обычный паттерн - хранить query внутри системы и отдавать их access/debug
+через методы query:
+
+```go
+type MovementSystem struct {
+	players *ecs.Query
+}
+
+func (s *MovementSystem) Name() string {
+	return "movement"
+}
+
+func (s *MovementSystem) Stage() ecs.StageID {
+	return UpdateStage
+}
+
+func (s *MovementSystem) Access() ecs.AccessSet {
+	return s.players.Access()
+}
+
+func (s *MovementSystem) DebugQueries() []ecs.QueryDebugInfo {
+	return []ecs.QueryDebugInfo{s.players.DebugInfo()}
 }
 ```
 
@@ -268,7 +343,7 @@ runner.Add(mySystem)
 
 ctx := &ecs.Context{
 	World:     world,
-	Commands:  &ecs.CommandBuffer{},
+	Commands:  ecs.NewCommandBuffer(),
 	Resources: ecs.NewResources(),
 }
 
@@ -290,9 +365,12 @@ if err := runner.Update(ctx); err != nil {
 Доступные операции:
 
 - `NewResources()` - создать контейнер;
-- `PutResources[T](resources, value)` - сохранить ресурс;
+- `PutResource[T](resources, value)` - сохранить ресурс;
 - `GetResources[T](resources)` - получить ресурс;
 - `RemoveResources[T](resources)` - удалить ресурс.
+
+`PutResource` возвращает `error`. `GetResources` возвращает `(*T, error)`, а
+отсутствующий ресурс обозначается `ErrResourcesNotFound`.
 
 ## Отладка
 

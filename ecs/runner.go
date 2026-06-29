@@ -40,7 +40,7 @@ func (r *Runner) ValidateAccess() error {
 			return fmt.Errorf("unknown stage %d for system %s", stage, system.Name())
 		}
 
-		var conflicts = stageAccess.ConflictsWith(system.Access())
+		var conflicts = stageAccess.ConflictsWith(systemAccess(system))
 
 		if len(conflicts) > 0 {
 			var components = conflicts[0]
@@ -53,15 +53,15 @@ func (r *Runner) ValidateAccess() error {
 			}
 		}
 
-		stageAccess.Merge(system.Access())
+		stageAccess.Merge(systemAccess(system))
 
-		for component := range system.Access().Reads {
+		for component := range systemAccess(system).Reads {
 			if _, exists := ownerByStage[stage][component]; !exists {
 				ownerByStage[stage][component] = system.Name()
 			}
 		}
 
-		for component := range system.Access().Writes {
+		for component := range systemAccess(system).Writes {
 			ownerByStage[stage][component] = system.Name()
 		}
 	}
@@ -121,7 +121,7 @@ func (r *Runner) InspectAccess() AccessReport {
 				continue
 			}
 
-			queries := system.DebugQueries()
+			queries := systemDebugQueries(system)
 			normalizedQueries := make([]QueryDebugInfo, 0, len(queries))
 
 			for _, query := range queries {
@@ -144,6 +144,22 @@ func (r *Runner) InspectAccess() AccessReport {
 	}
 
 	return report
+}
+
+func systemAccess(system System) AccessSet {
+	if provider, ok := system.(AccessProvider); ok {
+		return provider.Access()
+	}
+
+	return AccessSet{}
+}
+
+func systemDebugQueries(system System) []QueryDebugInfo {
+	if provider, ok := system.(DebugProvider); ok {
+		return provider.DebugQueries()
+	}
+
+	return nil
 }
 
 func (r *Runner) DebugAccess() string {

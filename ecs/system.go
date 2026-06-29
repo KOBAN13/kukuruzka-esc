@@ -15,6 +15,12 @@ type System interface {
 	Name() string
 	Stage() StageID
 	Update(ctx *Context) error
+}
+
+type AccessProvider interface {
 	Access() AccessSet
+}
+
+type DebugProvider interface {
 	DebugQueries() []QueryDebugInfo
 }
